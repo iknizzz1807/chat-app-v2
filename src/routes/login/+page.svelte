@@ -1,8 +1,4 @@
 <script lang="ts">
-  // Todo list:
-  // - User cannot change the type of form when the auth request is sending (the spinner is spinning)
-  // this problem can be solved by replacing the buttons to the loading spinner when loading
-  // - If login ok, display the okMsg text and redirect, do not display the buttons once again!
   import { login } from "./login";
   import { signup } from "./signup";
   import { currentUser } from "$lib/stores/currentUser";
@@ -27,7 +23,6 @@
   let loading: boolean = $state(false);
 
   $effect(() => {
-    // Solve: toggle form will reset the error
     if (formType) error = "";
   });
 

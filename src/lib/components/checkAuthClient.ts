@@ -8,5 +8,8 @@ export const checkAuthClient = () => {
   if (!get(currentUser)) {
     URL.set(get(page).url.pathname);
     goto("/login");
+    return false;
   }
+  return true;
 };
+// This is used to solve the problem check auth when goto

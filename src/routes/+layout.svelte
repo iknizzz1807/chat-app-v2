@@ -28,8 +28,8 @@
   {@render children()}
   <div class="footer">
     {#if isLogin}
-      <div>id: {get(currentUser)?.id}</div>
-      <div>username: {get(currentUser)?.username}</div>
+      <strong><div>id: {get(currentUser)?.id}</div></strong>
+    <strong><div>Name: {get(currentUser)?.name}</div></strong>
       <button onclick={logOut}>Log out</button>
     {/if}
   </div>
