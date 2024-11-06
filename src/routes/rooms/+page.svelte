@@ -5,7 +5,6 @@
   import { currentUser } from "$lib/stores/currentUser";
   import { get } from "svelte/store";
   import LoadingSpinner from "$lib/components/+LoadingSpinner.svelte";
-  import { load } from "../+layout";
 
   type Room = {
     room_name: string;

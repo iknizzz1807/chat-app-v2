@@ -25,14 +25,21 @@
 </script>
 
 <main class="container">
-  {@render children()}
-  <div class="footer">
-    {#if isLogin}
-      <strong><div>id: {get(currentUser)?.id}</div></strong>
-    <strong><div>Name: {get(currentUser)?.name}</div></strong>
-      <button onclick={logOut}>Log out</button>
-    {/if}
+  {#if isLogin}
+  <div class="navbar">
+    <button onclick={() => goto("/")}>Home</button>
+    <button onclick={() => goto("/rooms")}>Rooms</button>
+    <button onclick={() => goto("/dm")}>Direct Messages</button>
   </div>
+  {/if}
+  {@render children()}
+  {#if isLogin}
+  <div class="footer">
+      <strong><div>id: {get(currentUser)?.id}</div></strong>
+      <strong><div>Name: {get(currentUser)?.name}</div></strong>
+      <button onclick={logOut}>Log out</button>
+  </div>
+  {/if}
 </main>
 
 <style>
@@ -43,6 +50,18 @@
     flex-direction: column;
     align-items: center;
   }
+
+  .navbar {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    justify-content: center;  
+    position: absolute;
+    top: 0;
+    gap: 24px;
+    padding-top: 12px;
+  }
+
   .footer {
     display: flex;
     flex-direction: row;
@@ -51,5 +70,6 @@
     position: absolute;
     bottom: 0;
     gap: 4px;
-  }
+    padding-bottom: 12px;
+    }
 </style>
