@@ -13,7 +13,7 @@
 
   const unsubscribe = currentUser.subscribe((user) => {
     isLogin = !!user; 
-  });
+  }); // Subscribe to the current user to change the state of logout and navbar
 
   onDestroy(() => unsubscribe());
 
@@ -25,20 +25,20 @@
 </script>
 
 <main class="container">
-  {#if isLogin}
-  <div class="navbar">
-    <button onclick={() => goto("/")}>Home</button>
-    <button onclick={() => goto("/rooms")}>Rooms</button>
-    <button onclick={() => goto("/dm")}>Direct Messages</button>
-  </div>
+  {#if isLogin && $page.url.pathname !== "/login"}
+    <div class="navbar">
+      <button onclick={() => goto("/")}>Home</button>
+      <button onclick={() => goto("/rooms")}>Rooms</button>
+      <button onclick={() => goto("/dm")}>Direct Messages</button>
+    </div>
   {/if}
   {@render children()}
-  {#if isLogin}
-  <div class="footer">
-      <strong><div>id: {get(currentUser)?.id}</div></strong>
-      <strong><div>Name: {get(currentUser)?.name}</div></strong>
-      <button onclick={logOut}>Log out</button>
-  </div>
+  {#if isLogin && $page.url.pathname !== "/login"}
+    <div class="footer">
+        <strong><div>id: {get(currentUser)?.id}</div></strong>
+        <strong><div>Name: {get(currentUser)?.name}</div></strong>
+        <button onclick={logOut}>Log out</button>
+    </div>
   {/if}
 </main>
 
