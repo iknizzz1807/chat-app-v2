@@ -1,11 +1,17 @@
-<main>
+<main class="container">
   <div class="loader"></div>
 </main>
 
 <style>
+  .container {
+    display: flex;
+    justify-content: center;
+    height: 80px;
+    align-items: center;
+  }
   .loader {
-    border: 4px solid #f3f3f3; /* Light grey */
-    border-top: 4px solid #3498db; /* Blue */
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
     border-radius: 50%;
     width: 48px;
     height: 48px;

@@ -1,12 +1,21 @@
 <script lang="ts">
-  // Todo: fix the subscribe stuff because it does not work
+  // - Todo: Only load 50 messages, if scroll up then keep fetching more
+  // - Just load messages on first time click on conversation, see messenger web for more detailed
+  // - Fix the send message button while loading state, it does break the layout
+  // - If press the conversation and see no messages, show some texts like "No messages yet"
+  // - Implement the Search Conversation, idea: create state called "dataToSearch" includes id and name of a conversation,
+  // search in that data
+  // - Implement new message display on each conversation, change the. May be this can be achived by changing
+  // the way subscribing the messages to filter all the messages with all the conversation_id that the user has,
+  // when on mount fetch conversation as well as after creating a new conversation without refreshing the page.
+  // suggestion: use $effect to listen to the changes in the list of conversations
   import { onMount, onDestroy } from "svelte";
   import { checkAuthClient } from "$lib/components/checkAuthClient";
   import pb from "$lib/pocketbase/pocketbase";
   import { currentUser } from "$lib/stores/currentUser";
   import { get } from "svelte/store";
   import LoadingSpinner from "$lib/components/+LoadingSpinner.svelte";
-  import type { UnsubscribeFunc } from "pocketbase";
+  import { fade } from "svelte/transition";
 
   type Conversation = {
     id: string;
@@ -20,23 +29,39 @@
     content: string;
   };
 
+  // Text in the input states:
   let searchText: string = $state("");
   let messageText: string = $state("");
+  let createConversationText: string = $state("");
 
+  // Lists of data states:
   let conversations: Conversation[] | null = $state(null);
   let messages: Message[] | null = $state(null);
 
+  // Loading states:
   let loadingMessages: boolean = $state(false);
   let loadingConversations: boolean = $state(false);
   let loadingCreatingMessage: boolean = $state(false);
+  let loadingCreatingConversation: boolean = $state(false);
+
+  // Error states:
   let loadMessagesError: string = $state("");
   let loadConversationsError: string = $state("");
   let createMessageError: string = $state("");
+  let createConversationError: string = $state("");
 
+  // Success states:
+  let createConversationSuccess: boolean = $state(false);
+
+  // Identity states:
   let conversation_id: string = $state("");
-  var messagesContainer: HTMLElement;
 
-  let unsubscribe: () => Promise<UnsubscribeFunc>;
+  // Physical states:
+  let isOpenDialog: boolean = $state(false);
+  // let alreadySubscribeMessages: boolean = $state(false);
+
+  // Marks:
+  var messagesContainer: HTMLElement;
 
   onMount(() => {
     if (checkAuthClient()) {
@@ -45,9 +70,7 @@
   });
 
   onDestroy(() => {
-    if (unsubscribe) {
-      unsubscribe();
-    }
+    pb.collection("messages_users").unsubscribe();
   });
 
   $effect(() => {
@@ -55,6 +78,10 @@
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
   });
+
+  function toggleDialog() {
+    isOpenDialog = !isOpenDialog;
+  }
 
   const fetchConversations = async () => {
     loadingConversations = true;
@@ -94,6 +121,7 @@
           user_sent_name: record.expand?.user_sent.name,
           content: record.content,
         }));
+        pb.collection("messages_users").unsubscribe();
         subscribeToMessages(conversation_id);
       } else {
         throw new Error("User is not authenticated");
@@ -105,23 +133,29 @@
   };
 
   const subscribeToMessages = (conversation_id: string) => {
-    if (unsubscribe) {
-      unsubscribe();
-    }
-    unsubscribe = () =>
-      pb.collection("messages_users").subscribe("*", (record: any) => {
-        if (record.conversation === conversation_id) {
-          messages = [
-            ...(messages || []),
-            {
-              id: record.id,
-              user_sent_id: record.expand?.user_sent.id,
-              user_sent_name: record.expand?.user_sent.name,
-              content: record.content,
-            },
-          ];
-        }
-      });
+    pb.collection("messages_users").subscribe(
+      "*",
+      function (e: any) {
+        // console.log(e.action);
+        // console.log(e.record);
+        // Because the e.action can only be "create" so I assume that
+        // all the changes are all about creating messages
+        messages = [
+          ...(messages || []),
+          {
+            id: e.record.id,
+            user_sent_id: e.record.user_sent,
+            user_sent_name: e.record.expand?.user_sent.name,
+            content: e.record.content,
+          },
+        ];
+      },
+      {
+        /* other options like expand, custom headers, etc. */
+        expand: "user_sent",
+        filter: `conversation = "${conversation_id}" && user_sent != "${get(currentUser)?.id}"`,
+      }
+    );
   };
 
   const sendMessage = async () => {
@@ -146,6 +180,7 @@
           content: record.content,
         },
       ];
+      console.log("send here");
       messageText = "";
     } catch (error: any) {
       createMessageError = error.message;
@@ -154,7 +189,42 @@
   };
 
   const searchConversation = () => {
-    console.log(searchText);
+    // console.log(searchText);
+  };
+
+  const createConversation = async () => {
+    if (createConversationText.trim() === "") return;
+    loadingCreatingConversation = true;
+    createConversationError = "";
+    createConversationSuccess = false;
+    try {
+      if (get(currentUser)) {
+        const record = await pb.collection("conversations").create(
+          {
+            first_user: get(currentUser)?.id,
+            second_user: createConversationText,
+          },
+          {
+            expand: "first_user,second_user",
+          }
+        );
+        createConversationSuccess = true;
+        createConversationText = "";
+        conversations = [
+          ...(conversations || []),
+          {
+            id: record.id,
+            target_user:
+              record.expand?.first_user.id === get(currentUser)?.id
+                ? record.expand?.second_user.name
+                : record.expand?.first_user.name,
+          },
+        ];
+      }
+    } catch (error: any) {
+      createConversationError = error.message;
+    }
+    loadingCreatingConversation = false;
   };
 </script>
 
@@ -168,7 +238,9 @@
         oninput={searchConversation}
         class="search-bar"
       />
-      <button class="create-conversation">+</button>
+      <button class="create-conversation-button" onclick={toggleDialog}
+        >+</button
+      >
     </div>
     <div class="conversations">
       {#if loadingConversations}
@@ -186,7 +258,7 @@
               conversation_id = conversation.id;
             }}
             aria-label="Open conversation with {conversation.target_user}"
-            disabled={loadingMessages}
+            disabled={loadingMessages || conversation_id === conversation.id}
             class="conversation"
           >
             <p>Conversation Id: {conversation.id}</p>
@@ -244,6 +316,40 @@
   </div>
 </main>
 
+<!-- Things that is not shown -->
+{#if isOpenDialog}
+  <div class="dialog-backdrop" transition:fade>
+    <div class="dialog">
+      <form class="create-conversation-form">
+        <input
+          type="text"
+          placeholder="User id you want to chat with"
+          style="height: 40px; width: 100%; padding: 0px 12px"
+          required
+          bind:value={createConversationText}
+        />
+        {#if loadingCreatingConversation}
+          <LoadingSpinner />
+        {:else}
+          <button
+            onclick={createConversation}
+            style="background-color: aqua; height: 40px; width: 60px"
+            disabled={loadingCreatingConversation}>Add</button
+          >
+        {/if}
+        {#if createConversationError}
+          <div class="error">{createConversationError}</div>
+        {/if}
+        {#if createConversationSuccess}
+          <div class="success">Successfully!</div>
+        {/if}
+        <button onclick={toggleDialog} style="width: fit-content;">Close</button
+        >
+      </form>
+    </div>
+  </div>
+{/if}
+
 <style>
   .container {
     display: flex;
@@ -294,6 +400,40 @@
     gap: 16px;
   }
 
+  .search-bar {
+    height: 30px;
+    width: 100%;
+  }
+
+  .text-bar {
+    height: 40px;
+    width: 100%;
+    position: relative;
+    bottom: 0;
+  }
+
+  .create-conversation-button {
+    width: 60px;
+  }
+
+  .create-conversation-form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 32px;
+  }
+
+  .conversations {
+    overflow-y: auto;
+    width: 100%;
+  }
+
+  .conversation {
+    width: 100%;
+  }
+
   .messages {
     overflow-y: auto;
     width: 100%;
@@ -307,24 +447,33 @@
     text-align: left;
   }
 
-  .search-bar {
-    height: 30px;
-    width: 100%;
-  }
-
-  .text-bar {
-    height: 40px;
-    width: 100%;
-    position: relative;
-    bottom: 0;
-  }
-
-  .create-conversation {
-    width: 60px;
-  }
-
   .error {
     color: red;
     font-weight: bold;
+  }
+
+  .success {
+    color: green;
+    font-weight: bold;
+  }
+
+  .dialog-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .dialog {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
   }
 </style>
