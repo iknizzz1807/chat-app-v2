@@ -5,10 +5,7 @@
   // - If press the conversation and see no messages, show some texts like "No messages yet"
   // - Implement the Search Conversation, idea: create state called "dataToSearch" includes id and name of a conversation,
   // search in that data
-  // - Implement new message display on each conversation, change the. May be this can be achived by changing
-  // the way subscribing the messages to filter all the messages with all the conversation_id that the user has,
-  // when on mount fetch conversation as well as after creating a new conversation without refreshing the page.
-  // suggestion: use $effect to listen to the changes in the list of conversations
+  // - Solved: realtime stuff, new messages and conversations notifications solved!
   import { onMount, onDestroy } from "svelte";
   import { checkAuthClient } from "$lib/components/checkAuthClient";
   import pb from "$lib/pocketbase/pocketbase";
@@ -17,16 +14,18 @@
   import LoadingSpinner from "$lib/components/+LoadingSpinner.svelte";
   import { fade } from "svelte/transition";
 
-  type Conversation = {
-    id: string;
-    target_user: string;
-  };
-
   type Message = {
     id: string;
     user_sent_id: string;
     user_sent_name: string;
     content: string;
+  };
+
+  type Conversation = {
+    id: string;
+    target_user: string;
+    messages: Message[];
+    isRead: boolean;
   };
 
   // Text in the input states:
@@ -35,8 +34,7 @@
   let createConversationText: string = $state("");
 
   // Lists of data states:
-  let conversations: Conversation[] | null = $state(null);
-  let messages: Message[] | null = $state(null);
+  let conversations: { [id: string]: Conversation } = $state({});
 
   // Loading states:
   let loadingMessages: boolean = $state(false);
@@ -71,10 +69,11 @@
 
   onDestroy(() => {
     pb.collection("messages_users").unsubscribe();
+    pb.collection("conversations").unsubscribe();
   });
 
   $effect(() => {
-    if (messages) {
+    if (conversation_id && conversations[conversation_id]?.messages) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
   });
@@ -91,18 +90,37 @@
         sort: "-created",
         expand: "first_user,second_user",
       });
-      conversations = records.map((record) => ({
-        id: record.id,
-        target_user:
-          record.expand?.first_user.id === get(currentUser)?.id
-            ? record.expand?.second_user.name
-            : record.expand?.first_user.name,
-      }));
+      conversations = records.reduce(
+        (acc: { [key: string]: Conversation }, record) => {
+          acc[record.id] = {
+            id: record.id,
+            target_user:
+              record.expand?.first_user.id === get(currentUser)?.id
+                ? record.expand?.second_user.name
+                : record.expand?.first_user.name,
+            messages: [],
+            isRead: true,
+          };
+          return acc;
+        },
+        {}
+      );
       loadConversationsError = "";
     } catch (Error: any) {
       loadConversationsError = Error.message;
     }
     loadingConversations = false;
+
+    const recordLastMessages = await pb
+      .collection("last_message")
+      .getFullList({});
+    recordLastMessages.forEach((record) => {
+      if (conversations[record.conversation]) {
+        conversations[record.conversation].isRead =
+          record.last_user_sent === get(currentUser)?.id ? true : false;
+      }
+    });
+    subscribeToConversations();
   };
 
   const fetchMessages = async (conversation_id: string) => {
@@ -115,14 +133,12 @@
           sort: "created",
           expand: "user_sent",
         });
-        messages = records.map((record) => ({
+        conversations[conversation_id].messages = records.map((record) => ({
           id: record.id,
           user_sent_id: record.expand?.user_sent.id,
           user_sent_name: record.expand?.user_sent.name,
           content: record.content,
         }));
-        pb.collection("messages_users").unsubscribe();
-        subscribeToMessages(conversation_id);
       } else {
         throw new Error("User is not authenticated");
       }
@@ -132,28 +148,64 @@
     loadingMessages = false;
   };
 
-  const subscribeToMessages = (conversation_id: string) => {
+  const subscribeToConversations = () => {
+    pb.collection("conversations").subscribe(
+      "*",
+      function (e: any) {
+        conversations = {
+          ...conversations,
+          [e.record.id]: {
+            id: e.record.id,
+            target_user:
+              e.record.expand?.first_user.id === get(currentUser)?.id
+                ? e.record.expand?.second_user.name
+                : e.record.expand?.first_user.name,
+            messages: [],
+            isRead: true,
+          },
+        };
+      },
+      {
+        expand: "first_user,second_user",
+        filter: `first_user="${get(currentUser)?.id}" || second_user="${get(currentUser)?.id}"`,
+      }
+    );
+    subscribeToMessages();
+  };
+
+  const subscribeToMessages = () => {
+    const filterText =
+      Object.values(conversations)
+        .map(
+          (conversation: Conversation) => `conversation="${conversation.id}"`
+        )
+        .join("||") + ` && user_sent != "${get(currentUser)?.id}"`; // Fix this shit thing has so many problems, one is the newmessages wrong, two is the double message on the first conversation due to the wrong filter
+    console.log(filterText);
     pb.collection("messages_users").subscribe(
       "*",
       function (e: any) {
-        // console.log(e.action);
-        // console.log(e.record);
-        // Because the e.action can only be "create" so I assume that
-        // all the changes are all about creating messages
-        messages = [
-          ...(messages || []),
-          {
-            id: e.record.id,
-            user_sent_id: e.record.user_sent,
-            user_sent_name: e.record.expand?.user_sent.name,
-            content: e.record.content,
-          },
-        ];
+        if (conversations[e.record.conversation]) {
+          conversations[e.record.conversation].messages = [
+            ...(conversations[e.record.conversation].messages || []),
+            {
+              id: e.record.id,
+              user_sent_id: e.record.user_sent,
+              user_sent_name: e.record.expand?.user_sent.name,
+              content: e.record.content,
+            },
+          ];
+          conversations[e.record.conversation].isRead = false;
+        }
       },
       {
-        /* other options like expand, custom headers, etc. */
-        expand: "user_sent",
-        filter: `conversation = "${conversation_id}" && user_sent != "${get(currentUser)?.id}"`,
+        // filter:
+        //   Object.values(conversations)
+        //     .map(
+        //       (conversation: Conversation) =>
+        //         `conversation="${conversation.id}"`
+        //     )
+        //     .join(" || ") + ` && user_sent != "${get(currentUser)?.id}"`,
+        filter: filterText,
       }
     );
   };
@@ -171,8 +223,8 @@
         },
         { expand: "user_sent" }
       );
-      messages = [
-        ...(messages || []),
+      conversations[conversation_id].messages = [
+        ...(conversations[conversation_id].messages || []),
         {
           id: record.id,
           user_sent_id: record.user_sent,
@@ -180,7 +232,7 @@
           content: record.content,
         },
       ];
-      console.log("send here");
+      conversations[conversation_id].isRead = true;
       messageText = "";
     } catch (error: any) {
       createMessageError = error.message;
@@ -210,16 +262,18 @@
         );
         createConversationSuccess = true;
         createConversationText = "";
-        conversations = [
-          ...(conversations || []),
-          {
+        conversations = {
+          ...conversations,
+          [record.id]: {
             id: record.id,
             target_user:
               record.expand?.first_user.id === get(currentUser)?.id
                 ? record.expand?.second_user.name
                 : record.expand?.first_user.name,
+            messages: [],
+            isRead: true,
           },
-        ];
+        };
       }
     } catch (error: any) {
       createConversationError = error.message;
@@ -250,7 +304,7 @@
         <div class="error">{loadConversationsError}</div>
       {/if}
       {#if conversations}
-        {#each conversations as conversation}
+        {#each Object.values(conversations) as conversation}
           <button
             type="button"
             onclick={() => {
@@ -263,6 +317,9 @@
           >
             <p>Conversation Id: {conversation.id}</p>
             <p><strong>With: {conversation.target_user}</strong></p>
+            {#if !conversation.isRead}
+              <p>New message!</p>
+            {/if}
           </button>
         {/each}
       {/if}
@@ -274,8 +331,8 @@
     <div class="messages" bind:this={messagesContainer}>
       {#if loadingMessages}
         <LoadingSpinner />
-      {:else if messages}
-        {#each messages as message}
+      {:else if conversations[conversation_id]?.messages}
+        {#each conversations[conversation_id]?.messages as message}
           {#if message.user_sent_id === get(currentUser)?.id}
             <div class="my-message">
               <p><strong>{message.user_sent_name}</strong></p>
@@ -423,15 +480,6 @@
     justify-content: space-between;
     align-items: center;
     gap: 32px;
-  }
-
-  .conversations {
-    overflow-y: auto;
-    width: 100%;
-  }
-
-  .conversation {
-    width: 100%;
   }
 
   .messages {
