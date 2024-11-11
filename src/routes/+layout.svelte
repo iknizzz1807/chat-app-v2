@@ -7,19 +7,19 @@
   import { page } from "$app/stores";
   import { URL } from "./login/redirectURL";
 
-  let {children} = $props();
+  let { children } = $props();
 
   let isLogin: boolean = $state(false);
 
   const unsubscribe = currentUser.subscribe((user) => {
-    isLogin = !!user; 
+    isLogin = !!user;
   }); // Subscribe to the current user to change the state of logout and navbar
 
   onDestroy(() => unsubscribe());
 
   function logOut() {
     pb.authStore.clear();
-    URL.set(get(page).url.pathname)
+    URL.set(get(page).url.pathname);
     goto("/login");
   }
 </script>
@@ -29,15 +29,15 @@
     <div class="navbar">
       <button onclick={() => goto("/")}>Home</button>
       <button onclick={() => goto("/rooms")}>Rooms</button>
-      <button onclick={() => goto("/dm")}>Direct Messages</button>
+      <button onclick={() => goto("/dm/_")}>Direct Messages</button>
     </div>
   {/if}
   {@render children()}
   {#if isLogin && $page.url.pathname !== "/login"}
     <div class="footer">
-        <strong><div>id: {get(currentUser)?.id}</div></strong>
-        <strong><div>Name: {get(currentUser)?.name}</div></strong>
-        <button onclick={logOut}>Log out</button>
+      <strong><div>id: {get(currentUser)?.id}</div></strong>
+      <strong><div>Name: {get(currentUser)?.name}</div></strong>
+      <button onclick={logOut}>Log out</button>
     </div>
   {/if}
 </main>
@@ -55,7 +55,7 @@
     display: flex;
     flex-direction: row;
     width: 100%;
-    justify-content: center;  
+    justify-content: center;
     position: absolute;
     top: 0;
     gap: 24px;
@@ -66,10 +66,10 @@
     display: flex;
     flex-direction: row;
     width: 100%;
-    justify-content: center;  
+    justify-content: center;
     position: absolute;
     bottom: 0;
     gap: 4px;
     padding-bottom: 12px;
-    }
+  }
 </style>
