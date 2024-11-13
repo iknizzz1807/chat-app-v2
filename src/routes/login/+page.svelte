@@ -17,10 +17,13 @@
   let email: string = $state("");
   let username: string = $state("");
   let password: string = $state("");
+  let passwordConfirm: string = $state("");
   let error: string = $state("");
 
   let authOk: boolean = $state(false);
   let loading: boolean = $state(false);
+
+  let formElement: HTMLFormElement | undefined = $state();
 
   $effect(() => {
     if (formType) error = "";
@@ -41,8 +44,9 @@
   };
 
   const handleSignup = async () => {
+    const formData = new FormData(formElement);
     loading = true;
-    const response = await signup(fullName, email, username, password);
+    const response = await signup(formData);
     if (response) {
       loading = false;
       if (response.status === "error") {
@@ -92,25 +96,50 @@
     </form>
   {:else}
     <h1 style="text-align: center;">SIGNUP</h1>
-    <form onsubmit={handleSignup} class="login-form">
+    <form
+      onsubmit={handleSignup}
+      class="login-form"
+      enctype="multipart/form-data"
+      bind:this={formElement}
+    >
       <input
         type="text"
         bind:value={fullName}
         placeholder="Full Name"
         required
+        name="name"
+      />
+      <input
+        type="text"
+        bind:value={email}
+        placeholder="Email for password recovery"
+        required
+        name="email"
       />
       <input
         type="text"
         bind:value={username}
         placeholder="Username"
         required
+        name="username"
       />
       <input
         type="password"
         bind:value={password}
         placeholder="Password"
         required
+        name="password"
       />
+      <input
+        type="password"
+        placeholder="Password confirmed"
+        bind:value={passwordConfirm}
+        required
+        name="passwordConfirm"
+      />
+      <label for="avatar">Upload an avatar</label>
+      <input type="file" name="avatar" />
+
       {#if loading}
         <div class="loading-spinner">
           <LoadingSpinner />

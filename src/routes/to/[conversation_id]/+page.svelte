@@ -67,7 +67,11 @@
   onMount(() => {
     if (checkAuthClient()) {
       fetchConversations().then(() => {
-        if (!($page.params.conversation_id in conversations)) goto("/dm/_");
+        if (
+          !($page.params.conversation_id in conversations) &&
+          $page.params.conversation_id !== "_"
+        )
+          goto("/to/_");
         fetchMessages(conversation_id);
       });
 
@@ -93,7 +97,7 @@
   });
 
   $effect(() => {
-    if (conversation_id) goto(`/dm/${conversation_id}`);
+    if (conversation_id) goto(`/to/${conversation_id}`);
   });
 
   function toggleDialog() {
@@ -298,7 +302,7 @@
 </script>
 
 <main class="container">
-  <div class="conversations-section">
+  <!-- <div class="conversations-section">
     <div class="search-create">
       <input
         type="text"
@@ -387,6 +391,219 @@
     {#if createMessageError}
       <div class="error">{createMessageError}</div>
     {/if}
+  </div> -->
+
+  <div class="sidebar">
+    <div class="search-box">
+      <input type="text" placeholder="Search messages..." />
+    </div>
+    <div class="chat-list">
+      <div class="chat-item active">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=2"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Alice Smith</h4>
+          <p>Hey, how are you?</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=3"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Bob Johnson</h4>
+          <p>See you tomorrow!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+      <div class="chat-item">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
+          alt="Contact"
+          class="avatar"
+        />
+        <div class="chat-info">
+          <h4>Emma Davis</h4>
+          <p>Thanks for the help!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="chat-main">
+    <div class="chat-header">
+      <div class="chat-contact">
+        <img
+          src="https://api.dicebear.com/7.x/avataaars/svg?seed=2"
+          alt="Contact"
+          class="avatar"
+        />
+        <h3>Alice Smith</h3>
+      </div>
+    </div>
+    <div class="messages">
+      <div class="message received">
+        <p>Hey! How are you doing?</p>
+        <span class="time">10:30 AM</span>
+      </div>
+      <div class="message sent">
+        <p>I'm doing great! Just finished my work. How about you?</p>
+        <span class="time">10:31 AM</span>
+      </div>
+      <div class="message received">
+        <p>Same here! Want to grab coffee later?</p>
+        <span class="time">10:32 AM</span>
+      </div>
+      <div class="message sent">
+        <p>Sure, that sounds great! How about 3 PM?</p>
+        <span class="time">10:33 AM</span>
+      </div>
+
+      <div class="message received">
+        <p>hat sounds great! How ab</p>
+        <span class="time">10:32 AM</span>
+      </div>
+    </div>
+    <div class="message-input">
+      <input type="text" placeholder="Type a message..." />
+      <button>Send</button>
+    </div>
   </div>
 </main>
 
@@ -426,46 +643,180 @@
 
 <style>
   .container {
+    width: 90%;
+    height: calc(100vh - 40px);
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 80%;
-    height: 90vh;
-    background-color: aqua;
-    gap: 48px;
+    overflow: hidden;
+    margin-left: 80px;
+    overflow-x: auto;
   }
 
-  .conversations-section {
+  .sidebar {
+    width: 350px;
+    background: white;
+    border-right: 1px solid #e5e5e5;
     display: flex;
     flex-direction: column;
-    width: 30%;
-    margin: 16px 16px;
   }
 
-  .conversations {
-    overflow-y: auto;
-    width: 100%;
-  }
-
-  .conversation {
-    width: 100%;
-  }
-
-  .search-create {
+  /* .user-profile {
+    padding: 20px;
     display: flex;
-    justify-content: space-between;
-    flex-direction: row;
-    width: 100%;
-    gap: 4px;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #e5e5e5;
+  } */
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
   }
 
-  .search-bar {
-    height: 30px;
-    width: 100%;
+  .search-box {
+    padding: 10px;
   }
 
-  .create-conversation-button {
-    width: 60px;
+  .search-box input {
+    width: 100%;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 20px;
+    background: #f0f2f5;
+    font-size: 14px;
+    height: 52px;
+  }
+
+  .chat-list {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .chat-item {
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .chat-item:hover {
+    background: #f0f2f5;
+  }
+
+  .chat-item.active {
+    background: #e5efff;
+  }
+
+  .chat-info h4 {
+    font-size: 15px;
+    margin-bottom: 3px;
+  }
+
+  .chat-info p {
+    font-size: 13px;
+    color: #65676b;
+  }
+
+  .chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .chat-contact {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .messages {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex: 0 0 350;
+    padding: 20px;
+    background: #fff;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .message {
+    max-width: 60%;
+    padding: 10px 15px;
+    border-radius: 18px;
+    position: relative;
+  }
+
+  .message p {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .message .time {
+    font-size: 11px;
+    color: #65676b;
+    margin-top: 5px;
+    display: block;
+  }
+
+  .received {
+    align-self: flex-start;
+    background: #e5e5e5;
+    border-bottom-left-radius: 5px;
+  }
+
+  .sent {
+    align-self: flex-end;
+    background: #0084ff;
+    color: white;
+    border-bottom-right-radius: 5px;
+  }
+
+  .sent .time {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .message-input {
+    padding: 20px;
+    border-top: 1px solid #e5e5e5;
+    display: flex;
+    gap: 10px;
+  }
+
+  .message-input input {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 20px;
+    background: #f0f2f5;
+    font-size: 14px;
+    height: 52px;
+  }
+
+  .message-input button {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 20px;
+    background: #0084ff;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .message-input button:hover {
+    background: #0073e6;
   }
 
   .create-conversation-form {
@@ -495,40 +846,5 @@
     padding: 2rem;
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-  }
-
-  .messages-section {
-    display: flex;
-    flex-direction: column;
-    width: 70%;
-    margin: 16px 16px;
-    justify-content: space-between;
-  }
-  .send-messages-section {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-    gap: 16px;
-  }
-
-  .messages {
-    overflow-y: auto;
-    width: 100%;
-  }
-
-  .my-message {
-    text-align: right;
-  }
-
-  .your-message {
-    text-align: left;
-  }
-
-  .text-bar {
-    height: 40px;
-    width: 100%;
-    position: relative;
-    bottom: 0;
   }
 </style>

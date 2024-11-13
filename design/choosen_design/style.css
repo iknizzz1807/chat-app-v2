@@ -84,6 +84,32 @@ body {
   cursor: pointer;
   transition: background 0.2s;
   white-space: nowrap;
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+  z-index: 1000;
+  width: 100%;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px 20px;
+  color: #333;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.dropdown-menu a:hover {
+  background: #f0f2f5;
 }
 
 .nav-profile:hover {
@@ -238,12 +264,14 @@ body {
 .received {
   align-self: flex-start;
   background: #e5e5e5;
+  border-bottom-left-radius: 5px;
 }
 
 .sent {
   align-self: flex-end;
   background: #0084ff;
   color: white;
+  border-bottom-right-radius: 5px;
 }
 
 .sent .time {

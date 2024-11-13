@@ -1,24 +1,10 @@
 import pb from "$lib/pocketbase/pocketbase";
 import { login } from "./login";
 
-export const signup = async (
-  fullname: string,
-  email: string,
-  username: string,
-  password: string
-) => {
-  const data = {
-    username: username,
-    email: email,
-    emailVisibility: true,
-    password: password,
-    passwordConfirm: password,
-    name: fullname,
-  };
-
+export const signup = async (data: any) => {
   try {
     const record = await pb.collection("users").create(data);
-    await login(data.username, data.password);
+    await login(data.get("username"), data.get("password"));
     return {
       status: "ok",
     };
