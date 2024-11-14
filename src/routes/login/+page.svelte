@@ -59,7 +59,7 @@
   };
 </script>
 
-<main>
+<main class="container">
   {#if formType === "login"}
     <h1 style="text-align: center;">LOGIN</h1>
     <form onsubmit={handleLogin} class="login-form">
@@ -163,13 +163,21 @@
 </main>
 
 <style>
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    gap: 2.5rem;
+  }
+
   .login-form {
     display: flex;
     flex-direction: column;
     width: 400px;
     gap: 12px;
     box-shadow: 10px 5px 5px gray;
-    border: 1px black solid;
+    border: none;
     padding: 24px 24px;
   }
 
@@ -195,7 +203,8 @@
   }
 
   .main-button {
-    background-color: aqua;
+    background-color: #0084ff;
+    color: white;
   }
 
   .loading-spinner {

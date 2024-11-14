@@ -4,7 +4,7 @@
   // - If press the conversation and see no messages, show some texts like "No messages yet"
   // - Implement the Search Conversation, idea: create state called "dataToSearch" includes id and name of a conversation,
   // search in that data
-  import { onMount, onDestroy, tick } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { checkAuthClient } from "$lib/components/checkAuthClient";
   import pb from "$lib/pocketbase/pocketbase";
   import { currentUser } from "$lib/stores/currentUser";
@@ -26,9 +26,11 @@
     id: string;
     target_user_id: string;
     target_user_name: string;
+    target_user_image: string;
     hasFetchedMessages: boolean;
     messages: Message[];
     isRead: boolean;
+    last_message: string;
   };
 
   // Text in the input states:
@@ -70,9 +72,11 @@
         if (
           !($page.params.conversation_id in conversations) &&
           $page.params.conversation_id !== "_"
-        )
+        ) {
           goto("/to/_");
-        fetchMessages(conversation_id);
+        } else {
+          fetchMessages(conversation_id);
+        }
       });
 
       // Handle syncing the current conversation_id to the url pathname,
@@ -93,11 +97,15 @@
   });
 
   $effect(() => {
-    conversation_id = $page.params.conversation_id;
+    if (checkAuthClient()) {
+      conversation_id = $page.params.conversation_id;
+    }
   });
 
   $effect(() => {
-    if (conversation_id) goto(`/to/${conversation_id}`);
+    if (checkAuthClient()) {
+      if (conversation_id) goto(`/to/${conversation_id}`);
+    }
   });
 
   function toggleDialog() {
@@ -124,9 +132,14 @@
               record.expand?.first_user.id === get(currentUser)?.id
                 ? record.expand?.second_user.name
                 : record.expand?.first_user.name,
+            target_user_image:
+              record.expand?.first_user.id === get(currentUser)?.id
+                ? record.expand?.second_user.avatar
+                : record.expand?.first_user.avatar,
             hasFetchedMessages: false,
             messages: [],
             isRead: true,
+            last_message: "",
           };
           return acc;
         },
@@ -138,13 +151,15 @@
     }
     loadingConversations = false;
 
-    const recordLastMessages = await pb
-      .collection("last_message")
-      .getFullList({});
+    const recordLastMessages = await pb.collection("last_message").getFullList({
+      expand: "message",
+    });
     recordLastMessages.forEach((record) => {
       if (conversations[record.conversation]) {
         conversations[record.conversation].isRead =
           record.last_user_sent === get(currentUser)?.id ? true : false;
+        conversations[record.conversation].last_message =
+          record.expand?.message.content;
       }
     });
     subscribeToMessages();
@@ -197,10 +212,12 @@
           ];
           conversations[e.record.conversation].isRead = false;
         } else if (!conversations[e.record.conversation]) {
-          const newConversation = {
+          // This means a new conversation is created together with a new message
+          const newConversation: Conversation = {
             id: e.record.conversation,
             target_user_id: e.record.user_sent,
             target_user_name: e.record.expand?.user_sent.name,
+            target_user_image: e.record.expand?.user_sent.avatar,
             hasFetchedMessages: false,
             messages: [
               {
@@ -212,6 +229,7 @@
               },
             ],
             isRead: false,
+            last_message: e.record.content,
           };
           conversations[e.record.conversation] = newConversation;
         }
@@ -277,7 +295,7 @@
         );
         createConversationSuccess = true;
         createConversationText = "";
-        const newConversation = {
+        const newConversation: Conversation = {
           id: record.id,
           target_user_id:
             record.expand?.first_user.id === get(currentUser)?.id
@@ -287,9 +305,14 @@
             record.expand?.first_user.id === get(currentUser)?.id
               ? record.expand?.second_user.name
               : record.expand?.first_user.name,
+          target_user_image:
+            record.expand?.first_user.id === get(currentUser)?.id
+              ? record.expand?.second_user.avatar
+              : record.expand?.first_user.avatar,
           hasFetchedMessages: true,
           messages: [],
           isRead: true,
+          last_message: "",
         };
         conversations[newConversation.id] = newConversation;
         conversation_id = newConversation.id;
@@ -398,7 +421,36 @@
       <input type="text" placeholder="Search messages..." />
     </div>
     <div class="chat-list">
-      <div class="chat-item active">
+      {#if loadingConversations}
+        <LoadingSpinner />
+      {/if}
+      {#if loadConversationsError}
+        <div class="error">{loadConversationsError}</div>
+      {/if}
+      {#if conversations}
+        {#each Object.values(conversations) as conversation}
+          <div class="chat-item active">
+            <img
+              src={"https://pocketbase.ikniz.site/api/files/users/" +
+                conversation.target_user_id +
+                "/" +
+                conversation.target_user_image}
+              alt="Contact"
+              class="avatar"
+            />
+            <div class="chat-info">
+              <h4>{conversation.target_user_name}</h4>
+              <p>
+                {conversation.isRead === true
+                  ? "You: "
+                  : ""}{conversation.last_message}
+              </p>
+            </div>
+          </div>
+        {/each}
+      {/if}
+
+      <!-- <div class="chat-item active">
         <img
           src="https://api.dicebear.com/7.x/avataaars/svg?seed=2"
           alt="Contact"
@@ -419,151 +471,7 @@
           <h4>Bob Johnson</h4>
           <p>See you tomorrow!</p>
         </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=4"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Emma Davis</h4>
-          <p>Thanks for the help!</p>
-        </div>
-      </div>
+      </div> -->
     </div>
   </div>
   <div class="chat-main">

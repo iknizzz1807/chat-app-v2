@@ -65,7 +65,7 @@
   };
 </script>
 
-<main>
+<main class="container">
   <form>
     <input
       type="text"
@@ -94,8 +94,10 @@
 </main>
 
 <style>
-  .error {
-    color: red;
-    font-weight: bold;
+  .container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
   }
 </style>

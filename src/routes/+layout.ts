@@ -10,6 +10,6 @@ export const load = (async ({ url }) => {
       status: 302,
       redirect: "/login",
     };
-  } else if (url.pathname === "/to") throw redirect(307, "/to/_");
+  } else if (user && url.pathname === "/to") throw redirect(307, "/to/_");
   return { user };
 }) satisfies LayoutLoad;
