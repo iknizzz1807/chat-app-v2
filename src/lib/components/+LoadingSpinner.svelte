@@ -6,7 +6,6 @@
   .container {
     display: flex;
     justify-content: center;
-    height: 80px;
     align-items: center;
   }
   .loader {

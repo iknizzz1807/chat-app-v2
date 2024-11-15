@@ -1,14 +1,20 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { navigationState } from "$lib/stores/navigationState";
   import { checkAuthClient } from "$lib/components/checkAuthClient";
   import pb from "$lib/pocketbase/pocketbase";
   import { currentUser } from "$lib/stores/currentUser";
   import { get } from "svelte/store";
   import LoadingSpinner from "$lib/components/+LoadingSpinner.svelte";
 
+  // Todo:
+  // + Create, fetch messages in each room
+  // + Build and customize the UI
+
   type Room = {
+    room_id: string;
     room_name: string;
-    user_created: string;
+    thumbnail: string;
   };
 
   let room_name: string = $state("");
@@ -18,6 +24,7 @@
   let loading: boolean = $state(false);
 
   onMount(async () => {
+    navigationState.set("Rooms");
     if (checkAuthClient()) {
       fetchRooms();
     }
@@ -26,37 +33,12 @@
   const fetchRooms = async () => {
     loading = true;
     try {
-      const records = await pb.collection("rooms").getFullList({
-        expand: "user_created",
-      });
+      const records = await pb.collection("rooms").getFullList({});
       rooms = records.map((record) => ({
+        room_id: record.id,
         room_name: record.name,
-        user_created: record.expand?.user_created.name,
+        thumbnail: record.thumbnail,
       }));
-      error = "";
-    } catch (Error: any) {
-      error = Error.message;
-    }
-    loading = false;
-  };
-
-  const createNewRoom = async () => {
-    loading = true;
-    try {
-      const record = await pb
-        .collection("rooms")
-        .create(
-          { name: room_name, user_created: get(currentUser)?.id },
-          { expand: "user_created" }
-        );
-      rooms = [
-        ...(rooms || []),
-        {
-          room_name: record.name,
-          user_created: record.expand?.user_created.name,
-        },
-      ];
-      room_name = "";
       error = "";
     } catch (Error: any) {
       error = Error.message;
@@ -66,38 +48,33 @@
 </script>
 
 <main class="container">
-  <form>
-    <input
-      type="text"
-      placeholder="Create a new room"
-      bind:value={room_name}
-      required
-    />
-    <button onclick={createNewRoom} type="submit" disabled={loading}
-      >Create</button
-    >
-    {#if error}
-      <div class="error">{error}</div>
-    {/if}
-  </form>
-  <h1>Room list:</h1>
-  <button onclick={fetchRooms} disabled={loading}>Refresh</button>
-  {#if rooms}
-    {#each rooms as room}
-      <div><strong>Room name: {room.room_name}</strong></div>
-      <div>Created by: {room.user_created}</div>
-    {/each}
-  {/if}
   {#if loading}
     <LoadingSpinner />
+  {:else if rooms}
+    {#each rooms as room}
+      <div class="room">
+        <strong>{room.room_name}</strong>
+        <img
+          src={"https://pocketbase.ikniz.site/api/files/rooms/" +
+            room?.room_id +
+            "/" +
+            room?.thumbnail}
+          alt="Room"
+        />
+      </div>
+    {/each}
   {/if}
 </main>
 
 <style>
   .container {
+    width: 100%;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
+  }
+
+  .room img {
+    object-fit: contain;
   }
 </style>

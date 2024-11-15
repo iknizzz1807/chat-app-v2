@@ -13,6 +13,7 @@
   import { fade } from "svelte/transition";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { navigationState } from "$lib/stores/navigationState";
 
   type Message = {
     id: string;
@@ -20,6 +21,7 @@
     user_sent_name: string;
     user_received_id: string;
     content: string;
+    created: string;
   };
 
   type Conversation = {
@@ -67,21 +69,19 @@
   var messagesContainer: HTMLElement;
 
   onMount(() => {
+    navigationState.set("Chats");
     if (checkAuthClient()) {
-      fetchConversations().then(() => {
-        if (
-          !($page.params.conversation_id in conversations) &&
-          $page.params.conversation_id !== "_"
-        ) {
-          goto("/to/_");
-        } else {
-          fetchMessages(conversation_id);
-        }
-      });
-
-      // Handle syncing the current conversation_id to the url pathname,
-      // make sure that the conversation_id get from the pathname must be
-      // one of the available conversation_id
+      if ($page.url.pathname !== "" && $page.url.pathname !== "rooms")
+        fetchConversations().then(() => {
+          if ($page.params.conversation_id !== "_") {
+            if (!($page.params.conversation_id in conversations)) {
+              goto("/to/_");
+            } else {
+              conversation_id = $page.params.conversation_id;
+              fetchMessages(conversation_id);
+            }
+          }
+        });
       // Todo list: scroll to the conversation with the id when onmount
     }
   });
@@ -91,20 +91,15 @@
   });
 
   $effect(() => {
+    // Only sync when !== "_"
+    if (conversation_id && conversation_id !== "_") {
+      goto(`/to/${conversation_id}`);
+    }
+  });
+
+  $effect(() => {
     if (conversations[conversation_id]?.messages) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-  });
-
-  $effect(() => {
-    if (checkAuthClient()) {
-      conversation_id = $page.params.conversation_id;
-    }
-  });
-
-  $effect(() => {
-    if (checkAuthClient()) {
-      if (conversation_id) goto(`/to/${conversation_id}`);
     }
   });
 
@@ -120,6 +115,11 @@
         sort: "-created",
         expand: "first_user,second_user",
       });
+      const recordLastMessages = await pb
+        .collection("last_message")
+        .getFullList({
+          expand: "message",
+        });
       conversations = records.reduce(
         (acc: { [key: string]: Conversation }, record) => {
           acc[record.id] = {
@@ -145,24 +145,20 @@
         },
         {}
       );
+      recordLastMessages.forEach((record) => {
+        if (conversations[record.conversation]) {
+          conversations[record.conversation].isRead =
+            record.last_user_sent === get(currentUser)?.id ? true : false;
+          conversations[record.conversation].last_message =
+            record.expand?.message.content;
+        }
+      });
+      subscribeToMessages();
       loadConversationsError = "";
     } catch (Error: any) {
       loadConversationsError = Error.message;
     }
     loadingConversations = false;
-
-    const recordLastMessages = await pb.collection("last_message").getFullList({
-      expand: "message",
-    });
-    recordLastMessages.forEach((record) => {
-      if (conversations[record.conversation]) {
-        conversations[record.conversation].isRead =
-          record.last_user_sent === get(currentUser)?.id ? true : false;
-        conversations[record.conversation].last_message =
-          record.expand?.message.content;
-      }
-    });
-    subscribeToMessages();
   };
 
   const fetchMessages = async (conversation_id: string) => {
@@ -184,6 +180,7 @@
             user_sent_name: record.expand?.user_sent.name,
             user_received_id: record.user_received,
             content: record.content,
+            created: record.created,
           }));
         } else {
           throw new Error("User is not authenticated");
@@ -208,8 +205,10 @@
               user_sent_name: e.record.expand?.user_sent.name,
               user_received_id: conversations[conversation_id].target_user_id,
               content: e.record.content,
+              created: e.record.created,
             },
           ];
+          conversations[e.record.conversation].last_message = e.record.content;
           conversations[e.record.conversation].isRead = false;
         } else if (!conversations[e.record.conversation]) {
           // This means a new conversation is created together with a new message
@@ -226,6 +225,7 @@
                 user_sent_name: e.record.expand?.user_sent.name,
                 user_received_id: e.record.user_received,
                 content: e.record.content,
+                created: e.record.created,
               },
             ],
             isRead: false,
@@ -263,6 +263,7 @@
           user_sent_name: record.expand?.user_sent.name,
           user_received_id: conversations[conversation_id].target_user_id,
           content: record.content,
+          created: record.created,
         },
       ];
       conversations[conversation_id].isRead = true;
@@ -321,69 +322,98 @@
       createConversationError = error.message;
     }
     loadingCreatingConversation = false;
-  };
+  }; // Test this stuff
 </script>
 
 <main class="container">
-  <!-- <div class="conversations-section">
-    <div class="search-create">
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions, a11y_missing_attribute, a11y_no_noninteractive_element_interactions (because of reasons) -->
+  <div class="sidebar">
+    <div class="search-box">
       <input
         type="text"
-        placeholder="Search conversation"
+        placeholder="Search conversations..."
         bind:value={searchText}
-        oninput={searchConversation}
-        class="search-bar"
+        disabled={loadingConversations}
+        onchange={searchConversation}
       />
-      <button class="create-conversation-button" onclick={toggleDialog}
-        >+</button
-      >
+      <button onclick={toggleDialog}>New</button>
     </div>
-    <div class="conversations">
+    <div class="chat-list">
       {#if loadingConversations}
         <LoadingSpinner />
-      {/if}
-      {#if loadConversationsError}
-        <div class="error">{loadConversationsError}</div>
-      {/if}
-      {#if conversations}
+      {:else if conversations && !loadingConversations}
         {#each Object.values(conversations) as conversation}
-          <button
-            type="button"
+          <div
+            class={"chat-item " +
+              (conversation.id === conversation_id ? "active" : "")}
             onclick={() => {
               fetchMessages(conversation.id);
               conversation_id = conversation.id;
             }}
-            aria-label="Open conversation with {conversation.target_user_name}"
-            disabled={loadingMessages || conversation_id === conversation.id}
-            class="conversation"
           >
-            <p>Conversation Id: {conversation.id}</p>
-            <p><strong>With: {conversation.target_user_name}</strong></p>
-            {#if !conversation.isRead}
-              <p>New message!</p>
-            {/if}
-          </button>
+            <img
+              src={"https://pocketbase.ikniz.site/api/files/users/" +
+                conversation.target_user_id +
+                "/" +
+                conversation.target_user_image}
+              alt="Contact"
+              class="avatar"
+            />
+            <div class="chat-info">
+              <h4>{conversation.target_user_name}</h4>
+              <p>
+                {#if conversation.last_message}
+                  {conversation.isRead === true
+                    ? "You: " + conversation.last_message
+                    : "" + conversation.last_message}
+                {/if}
+              </p>
+            </div>
+          </div>
         {/each}
+      {/if}
+      {#if loadConversationsError}
+        <div class="error">{loadConversationsError}</div>
       {/if}
     </div>
   </div>
-
-  <div class="messages-section">
-    <div style="font-size: 40px;">Messages</div>
+  <div class="chat-main">
+    <div class="chat-header">
+      <div class="chat-contact">
+        <img
+          src={conversation_id
+            ? "https://pocketbase.ikniz.site/api/files/users/" +
+              conversations[conversation_id]?.target_user_id +
+              "/" +
+              conversations[conversation_id]?.target_user_image
+            : "https://api.dicebear.com/7.x/avataaars/svg?seed=2"}
+          alt="Contact"
+          class="avatar"
+        />
+        <h3>
+          {#if conversation_id}
+            {conversations[conversation_id].target_user_name}
+          {:else}
+            Choose a conversation or create a new one to start chatting
+          {/if}
+        </h3>
+      </div>
+    </div>
     <div class="messages" bind:this={messagesContainer}>
       {#if loadingMessages}
         <LoadingSpinner />
       {:else if conversations[conversation_id]?.messages}
         {#each conversations[conversation_id]?.messages as message}
           {#if message.user_sent_id === get(currentUser)?.id}
-            <div class="my-message">
-              <p><strong>{message.user_sent_name}</strong></p>
+            <div class="message sent">
               <p>{message.content}</p>
+              <span class="time">{message.created}</span>
             </div>
+            <!-- {message.user_sent_name} -->
           {:else}
-            <div class="your-message">
-              <p><strong>{message.user_sent_name}</strong></p>
+            <div class="message received">
               <p>{message.content}</p>
+              <span class="time">{message.created}</span>
             </div>
           {/if}
         {/each}
@@ -392,12 +422,11 @@
         <div class="error">{loadMessagesError}</div>
       {/if}
     </div>
-
-    <form class="send-messages-section">
+    <form class="message-input">
       <input
         type="text"
-        placeholder="Text here"
-        class="text-bar"
+        placeholder="Type a message..."
+        disabled={!conversation_id || conversation_id === "_"}
         bind:value={messageText}
         required
       />
@@ -411,107 +440,6 @@
         >
       {/if}
     </form>
-    {#if createMessageError}
-      <div class="error">{createMessageError}</div>
-    {/if}
-  </div> -->
-
-  <div class="sidebar">
-    <div class="search-box">
-      <input type="text" placeholder="Search messages..." />
-    </div>
-    <div class="chat-list">
-      {#if loadingConversations}
-        <LoadingSpinner />
-      {/if}
-      {#if loadConversationsError}
-        <div class="error">{loadConversationsError}</div>
-      {/if}
-      {#if conversations}
-        {#each Object.values(conversations) as conversation}
-          <div class="chat-item active">
-            <img
-              src={"https://pocketbase.ikniz.site/api/files/users/" +
-                conversation.target_user_id +
-                "/" +
-                conversation.target_user_image}
-              alt="Contact"
-              class="avatar"
-            />
-            <div class="chat-info">
-              <h4>{conversation.target_user_name}</h4>
-              <p>
-                {conversation.isRead === true
-                  ? "You: "
-                  : ""}{conversation.last_message}
-              </p>
-            </div>
-          </div>
-        {/each}
-      {/if}
-
-      <!-- <div class="chat-item active">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=2"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Alice Smith</h4>
-          <p>Hey, how are you?</p>
-        </div>
-      </div>
-      <div class="chat-item">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=3"
-          alt="Contact"
-          class="avatar"
-        />
-        <div class="chat-info">
-          <h4>Bob Johnson</h4>
-          <p>See you tomorrow!</p>
-        </div>
-      </div> -->
-    </div>
-  </div>
-  <div class="chat-main">
-    <div class="chat-header">
-      <div class="chat-contact">
-        <img
-          src="https://api.dicebear.com/7.x/avataaars/svg?seed=2"
-          alt="Contact"
-          class="avatar"
-        />
-        <h3>Alice Smith</h3>
-      </div>
-    </div>
-    <div class="messages">
-      <div class="message received">
-        <p>Hey! How are you doing?</p>
-        <span class="time">10:30 AM</span>
-      </div>
-      <div class="message sent">
-        <p>I'm doing great! Just finished my work. How about you?</p>
-        <span class="time">10:31 AM</span>
-      </div>
-      <div class="message received">
-        <p>Same here! Want to grab coffee later?</p>
-        <span class="time">10:32 AM</span>
-      </div>
-      <div class="message sent">
-        <p>Sure, that sounds great! How about 3 PM?</p>
-        <span class="time">10:33 AM</span>
-      </div>
-
-      <div class="message received">
-        <p>hat sounds great! How ab</p>
-        <span class="time">10:32 AM</span>
-      </div>
-    </div>
-    <div class="message-input">
-      <input type="text" placeholder="Type a message..." />
-      <button>Send</button>
-    </div>
   </div>
 </main>
 
@@ -523,27 +451,33 @@
         <input
           type="text"
           placeholder="User id you want to chat with"
-          style="height: 40px; width: 100%; padding: 0px 12px"
+          style="height: 48px; width: 100%; padding: 0px 12px; border: none; background-color: #f0f2f5; border-radius: 20px"
           required
           bind:value={createConversationText}
         />
-        {#if loadingCreatingConversation}
-          <LoadingSpinner />
-        {:else}
+        <div style="display: flex; gap: 12px">
+          {#if loadingCreatingConversation}
+            <LoadingSpinner />
+          {:else}
+            <button
+              class="create-conversation-btn"
+              onclick={createConversation}
+              disabled={loadingCreatingConversation}>Add</button
+            >
+          {/if}
+
+          {#if createConversationSuccess}
+            <div class="success">Successfully!</div>
+          {/if}
           <button
-            onclick={createConversation}
-            style="background-color: aqua; height: 40px; width: 60px"
-            disabled={loadingCreatingConversation}>Add</button
+            onclick={toggleDialog}
+            class="close-conversation-btn"
+            disabled={loadingCreatingConversation}>Close</button
           >
-        {/if}
+        </div>
         {#if createConversationError}
           <div class="error">{createConversationError}</div>
         {/if}
-        {#if createConversationSuccess}
-          <div class="success">Successfully!</div>
-        {/if}
-        <button onclick={toggleDialog} style="width: fit-content;">Close</button
-        >
       </form>
     </div>
   </div>
@@ -570,14 +504,6 @@
     flex-direction: column;
   }
 
-  /* .user-profile {
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid #e5e5e5;
-  } */
-
   .avatar {
     width: 40px;
     height: 40px;
@@ -587,6 +513,8 @@
 
   .search-box {
     padding: 10px;
+    display: flex;
+    gap: 8px;
   }
 
   .search-box input {
@@ -597,6 +525,16 @@
     background: #f0f2f5;
     font-size: 14px;
     height: 52px;
+    flex: 1;
+  }
+
+  .search-box button {
+    padding: 0px 16px;
+    background-color: #0084ff;
+    font-weight: 600;
+    border-radius: 20px;
+    color: white;
+    border: none;
   }
 
   .chat-list {
@@ -730,7 +668,7 @@
   .create-conversation-form {
     display: flex;
     flex-direction: column;
-    width: 100%;
+    width: 50vh;
     justify-content: space-between;
     align-items: center;
     gap: 32px;
@@ -754,5 +692,29 @@
     padding: 2rem;
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+
+  .create-conversation-btn {
+    background-color: #0084ff;
+    height: 40px;
+    width: 80px;
+    font-weight: 600;
+    border-radius: 20px;
+    color: white;
+    border: none;
+  }
+
+  .create-conversation-btn:hover {
+    background: #0073e6;
+  }
+
+  .close-conversation-btn {
+    background-color: #f0f2f5;
+    height: 40px;
+    width: 80px;
+    font-weight: 600;
+    border-radius: 20px;
+    color: gray;
+    border: none;
   }
 </style>
