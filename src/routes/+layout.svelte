@@ -17,6 +17,7 @@
 
   const unsubscribeCurrentUser = currentUser.subscribe((user) => {
     isLogin = !!user;
+    dropdownVisible = false;
   }); // Subscribe to the current user to change the state of logout and navbar
 
   const unsubscribeNavigationState = navigationState.subscribe((state) => {
