@@ -1,10 +1,21 @@
 import { writable } from "svelte/store";
 
 type Room = {
-  room_id: string;
+  id: string;
   room_name: string;
-  description: string;
-  thumbnail: string;
+  room_image: string;
+  room_description: string;
+  hasFetchedMessages: boolean;
+  messages: Message[];
+};
+
+type Message = {
+  id: string;
+  user_sent_id: string;
+  user_sent_name: string;
+  user_avatar: string;
+  content: string;
+  created: string;
 };
 
 export const hasFetchedRooms = writable<boolean>(false);

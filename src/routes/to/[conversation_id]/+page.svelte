@@ -325,6 +325,10 @@
   }; // Test this stuff
 </script>
 
+<svelte:head>
+  <title>Chat</title>
+</svelte:head>
+
 <main class="container">
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions, a11y_missing_attribute, a11y_no_noninteractive_element_interactions (because of reasons) -->
   <div class="sidebar">
@@ -465,10 +469,6 @@
               disabled={loadingCreatingConversation}>Add</button
             >
           {/if}
-
-          {#if createConversationSuccess}
-            <div class="success">Successfully!</div>
-          {/if}
           <button
             onclick={toggleDialog}
             class="close-conversation-btn"
@@ -479,6 +479,9 @@
           <div class="error">{createConversationError}</div>
         {/if}
       </form>
+      {#if createConversationSuccess}
+        <div class="success">Successfully!</div>
+      {/if}
     </div>
   </div>
 {/if}

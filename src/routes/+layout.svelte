@@ -12,6 +12,7 @@
 
   let isLogin: boolean = $state(false);
   let showNotification: boolean = $state(false);
+  let notificationContent: string = $state("");
   let dropdownVisible: boolean = $state(false);
   let currentNavigationState: string = $state("");
 
@@ -36,13 +37,21 @@
   }
 
   function copyToClipboard(id: string) {
-    navigator.clipboard.writeText(get(currentUser)?.id);
-    showNotification = true;
+    navigator.clipboard.writeText(id);
+    notify("Copied to clipboard");
+  }
 
-    // Close after 2 seconds
-    setTimeout(() => {
-      showNotification = false;
-    }, 2000);
+  function notify(text: string) {
+    if (!showNotification) {
+      notificationContent = text;
+
+      showNotification = true;
+
+      // Close after 2 seconds
+      setTimeout(() => {
+        showNotification = false;
+      }, 2000);
+    }
   }
 </script>
 
@@ -72,7 +81,7 @@
         </li>
         <li
           class={currentNavigationState === "Rooms" ? "active" : ""}
-          onclick={() => goto("/rooms")}
+          onclick={() => notify("This feature is under developement")}
         >
           <i class="fas fa-users"></i><span>Rooms</span>
         </li>
@@ -173,7 +182,7 @@
 </main>
 
 {#if showNotification}
-  <div class="notification show">Copied to clipboard</div>
+  <div class="notification show">{notificationContent}</div>
 {/if}
 
 <style>

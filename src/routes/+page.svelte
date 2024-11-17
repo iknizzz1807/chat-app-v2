@@ -11,7 +11,6 @@
   let loadingRequestPassword: boolean = $state(false);
   let requestPasswordError: boolean = $state(false);
   let requestPasswordSuccess: boolean = $state(false);
-  let isLoadingAvatar: boolean = $state(true);
   let avatarUrl: string = $state("");
 
   onMount(() => {
@@ -20,10 +19,10 @@
   });
 
   $effect(() => {
+    // After the check auth, change the avatar because the check auth process takes a while
     const user = get(currentUser);
     if (user) {
       avatarUrl = `https://pocketbase.ikniz.site/api/files/users/${user.id}/${user.avatar}`;
-      isLoadingAvatar = false;
     }
   });
 
@@ -62,6 +61,9 @@
   };
 </script>
 
+<svelte:head>
+  <title>Profile</title>
+</svelte:head>
 <main class="container">
   <div class="profile-card">
     <div class="profile-header">

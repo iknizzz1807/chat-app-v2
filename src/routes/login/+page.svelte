@@ -59,6 +59,10 @@
   };
 </script>
 
+<svelte:head>
+  <title>{formType}</title>
+</svelte:head>
+
 <main class="container">
   {#if formType === "login"}
     <h1 style="text-align: center;">LOGIN</h1>
@@ -91,7 +95,7 @@
         <div class="error">{error}</div>
       {/if}
       {#if authOk}
-        <div class="ok-msg">Successfully!</div>
+        <div class="success">Successfully!</div>
       {/if}
     </form>
   {:else}
@@ -156,7 +160,7 @@
         <div class="error">{error}</div>
       {/if}
       {#if authOk}
-        <div class="ok-msg">Successfully!</div>
+        <div class="success">Successfully!</div>
       {/if}
     </form>
   {/if}
@@ -179,11 +183,6 @@
     box-shadow: 10px 5px 5px gray;
     border: none;
     padding: 24px 24px;
-  }
-
-  .error {
-    color: red;
-    font-weight: bold;
   }
 
   button {
@@ -209,10 +208,5 @@
 
   .loading-spinner {
     align-self: center;
-  }
-
-  .ok-msg {
-    color: green;
-    font-weight: bold;
   }
 </style>
