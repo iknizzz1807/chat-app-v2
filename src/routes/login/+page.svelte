@@ -199,11 +199,13 @@
     height: 40px;
     border-radius: 8px;
     padding: 4px 12px;
+    border: 0.5px solid black;
   }
 
   .main-button {
     background-color: #0084ff;
     color: white;
+    border: none;
   }
 
   .loading-spinner {
