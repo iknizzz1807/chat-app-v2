@@ -30,10 +30,23 @@
     unsubscribeNavigationState();
   });
 
+  $effect(() => {
+    if (!isLogin && $page.url.pathname !== "/login") {
+      URL.set($page.url.pathname);
+      goto("/login");
+    } else if (isLogin && $page.url.pathname === "/to") goto("/to/_");
+    else if (isLogin && $page.url.pathname === "/login") {
+      setTimeout(() => {
+        goto(get(URL));
+        URL.set("/");
+      }, 500);
+    }
+  });
+
   function logOut() {
     pb.authStore.clear();
-    URL.set(get(page).url.pathname);
-    goto("/login");
+    // URL.set(get(page).url.pathname);
+    // goto("/login");
   }
 
   function copyToClipboard(id: string) {

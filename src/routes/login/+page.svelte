@@ -7,9 +7,9 @@
   import { goto } from "$app/navigation";
   import LoadingSpinner from "$lib/components/+LoadingSpinner.svelte";
 
-  onMount(() => {
-    if (get(currentUser)) goto("/");
-  });
+  // onMount(() => {
+  //   if (get(currentUser)) goto("/");
+  // });
 
   let formType: string = $state("login");
 

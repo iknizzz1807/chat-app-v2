@@ -17,10 +17,10 @@ export const login = async (username: string, password: string) => {
     };
 
     // Perform delay and navigation asynchronously
-    setTimeout(() => {
-      goto(get(URL));
-      URL.set("/");
-    }, 500);
+    // setTimeout(() => {
+    //   goto(get(URL));
+    //   URL.set("/");
+    // }, 500);
 
     return result;
   } catch (error: any) {

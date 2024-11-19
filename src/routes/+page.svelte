@@ -14,7 +14,7 @@
   let avatarUrl: string = $state("");
 
   onMount(() => {
-    checkAuthClient();
+    // checkAuthClient();
     navigationState.set("Profile");
   });
 
