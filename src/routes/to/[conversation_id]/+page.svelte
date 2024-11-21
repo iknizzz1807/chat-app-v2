@@ -5,7 +5,7 @@
   // - Implement the Search Conversation, idea: create state called "dataToSearch" includes id and name of a conversation,
   // search in that data
   import { onMount, onDestroy } from "svelte";
-  import { checkAuthClient } from "$lib/components/checkAuthClient";
+  // import { checkAuthClient } from "$lib/components/checkAuthClient";
   import pb from "$lib/pocketbase/pocketbase";
   import { currentUser } from "$lib/stores/currentUser";
   import { get } from "svelte/store";
@@ -70,20 +70,18 @@
 
   onMount(() => {
     navigationState.set("Chats");
-    if (checkAuthClient()) {
-      if ($page.url.pathname !== "" && $page.url.pathname !== "rooms")
-        fetchConversations().then(() => {
-          if ($page.params.conversation_id !== "_") {
-            if (!($page.params.conversation_id in conversations)) {
-              goto("/to/_");
-            } else {
-              conversation_id = $page.params.conversation_id;
-              fetchMessages(conversation_id);
-            }
+    if ($page.url.pathname !== "" && $page.url.pathname !== "rooms")
+      fetchConversations().then(() => {
+        if ($page.params.conversation_id !== "_") {
+          if (!($page.params.conversation_id in conversations)) {
+            goto("/to/_");
+          } else {
+            conversation_id = $page.params.conversation_id;
+            fetchMessages(conversation_id);
           }
-        });
-      // Todo list: scroll to the conversation with the id when onmount
-    }
+        }
+      });
+    // Todo list: scroll to the conversation with the id when onmount
   });
 
   onDestroy(() => {
@@ -197,13 +195,14 @@
       "*",
       function (e: any) {
         if (conversations[e.record.conversation]) {
-          conversations[conversation_id].messages = [
-            ...(conversations[conversation_id].messages || []),
+          conversations[e.record.conversation].messages = [
+            ...(conversations[e.record.conversation].messages || []),
             {
               id: e.record.id,
               user_sent_id: e.record.user_sent,
               user_sent_name: e.record.expand?.user_sent.name,
-              user_received_id: conversations[conversation_id].target_user_id,
+              user_received_id:
+                conversations[e.record.conversation].target_user_id,
               content: e.record.content,
               created: e.record.created,
             },
@@ -267,6 +266,7 @@
         },
       ];
       conversations[conversation_id].isRead = true;
+      conversations[conversation_id].last_message = record.content;
       messageText = "";
     } catch (error: any) {
       createMessageError = error.message;

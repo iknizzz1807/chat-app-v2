@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { navigationState } from "$lib/stores/navigationState";
-  import { checkAuthClient } from "$lib/components/checkAuthClient";
+  // import { checkAuthClient } from "$lib/components/checkAuthClient";
   import { currentUser } from "$lib/stores/currentUser";
   import { get } from "svelte/store";
   import pb from "$lib/pocketbase/pocketbase";
