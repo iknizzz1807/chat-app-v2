@@ -1,6 +1,4 @@
 # chat-app-v2
- [Chat App](https://chat.app.ikniz.id.vn)
-
 The version 2 of my chat app using Sveltekit and Pocketbase. Simply like messenger clone, but not as good
 
 ---
